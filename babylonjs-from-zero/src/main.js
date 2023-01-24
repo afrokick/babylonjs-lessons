@@ -1,4 +1,5 @@
 import * as BABYLON from "https://esm.sh/@babylonjs/core@5.43.1/Legacy/legacy";
+import "https://esm.sh/@babylonjs/loaders@5.43.1/glTF";
 
 const canvas = document.querySelector("#game-canvas");
 const engine = new BABYLON.Engine(canvas, true, { stencil: true }, true);
@@ -12,6 +13,7 @@ const createScene = function () {
     new BABYLON.Vector3(0, 5, -10),
     scene
   );
+  camera.minZ = 0.01;
   // Targets the camera to scene origin
   camera.setTarget(BABYLON.Vector3.Zero());
   // Attaches the camera to the canvas
@@ -23,21 +25,46 @@ const createScene = function () {
     scene
   );
   // Dim the light a small amount 0 - 1
-  light.intensity = 0.7;
-  // Built-in 'sphere' shape.
-  const sphere = BABYLON.MeshBuilder.CreateSphere(
-    "sphere",
-    { diameter: 2, segments: 32 },
-    scene
-  );
-  // Move phere upward 1/2 its height
-  sphere.position.y = 1;
+  light.intensity = 1;
+
   // Built-in 'ground' shape.
   const ground = BABYLON.MeshBuilder.CreateGround(
     "ground",
-    { width: 6, height: 6 },
+    { width: 50, height: 50 },
     scene
   );
+
+  const material = new BABYLON.StandardMaterial("groundMaterial", scene);
+  material.diffuseColor = BABYLON.Color3.FromHexString("#97ae3b");
+
+  ground.material = material;
+
+  BABYLON.SceneLoader.ImportMeshAsync(
+    null,
+    "./public/",
+    "Market_SecondAge_Level3.gltf",
+    scene
+  ).then((result) => {
+    const [root] = result.meshes;
+    root.scaling.setAll(5);
+  });
+
+  BABYLON.SceneLoader.ImportMeshAsync(
+    null,
+    "./public/",
+    "Adventurer.gltf",
+    scene
+  ).then((result) => {
+    const [root] = result.meshes;
+    result.animationGroups.forEach((ag) => {
+      if (ag.name === "Idle") {
+        ag.start(true);
+      } else {
+        ag.stop();
+      }
+    });
+    root.rotate(BABYLON.Vector3.Up(), Math.PI);
+  });
 
   return scene;
 };
