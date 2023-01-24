@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "baseUrl": ".",
+    "module": "CommonJS",
+    "allowJs": true,
+    "noEmit": true,
+    "strict": true,
+    "moduleResolution": "node"
+  },
+  "exclude": ["node_modules"]
+}
