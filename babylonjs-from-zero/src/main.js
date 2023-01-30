@@ -1,5 +1,5 @@
-import * as BABYLON from "https://esm.sh/@babylonjs/core@5.43.1/Legacy/legacy";
-import "https://esm.sh/@babylonjs/loaders@5.43.1/glTF";
+import * as BABYLON from "https://esm.sh/@babylonjs/core@5.44.0/Legacy/legacy";
+import "https://esm.sh/@babylonjs/loaders@5.44.0/glTF";
 
 const canvas = document.querySelector("#game-canvas");
 const engine = new BABYLON.Engine(canvas, true, { stencil: true }, true);
