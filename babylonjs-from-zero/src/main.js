@@ -35,7 +35,20 @@ const createScene = function () {
   );
 
   const material = new BABYLON.StandardMaterial("groundMaterial", scene);
-  material.diffuseColor = BABYLON.Color3.FromHexString("#97ae3b");
+
+  const groundTexture = new BABYLON.Texture(
+    "https://playground.babylonjs.com/textures/floor.png"
+  );
+  groundTexture.uScale = groundTexture.vScale = 20;
+  material.diffuseTexture = groundTexture;
+
+  const groundBumpTexture = new BABYLON.Texture(
+    "https://playground.babylonjs.com/textures/floor_bump.png"
+  );
+  groundBumpTexture.uScale = groundBumpTexture.vScale = 20;
+  material.bumpTexture = groundBumpTexture;
+
+  material.specularColor = BABYLON.Color3.White().scale(0.3);
 
   ground.material = material;
 
