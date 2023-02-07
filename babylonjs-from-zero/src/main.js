@@ -185,7 +185,7 @@ const createScene = function () {
 
       const dir = diff.normalize();
 
-      const velocity = dir.scaleInPlace(speed * deltaTime);
+      const velocity = dir.scale(speed * deltaTime);
       root.position.addInPlace(velocity);
     });
   });
