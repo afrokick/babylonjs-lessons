@@ -69,14 +69,125 @@ const createScene = function () {
     scene
   ).then((result) => {
     const [root] = result.meshes;
-    result.animationGroups.forEach((ag) => {
-      if (ag.name === "Idle") {
-        ag.start(true);
-      } else {
-        ag.stop();
-      }
+    const playIdle = () => {
+      result.animationGroups.forEach((ag) => {
+        if (ag.name === "Idle") {
+          ag.start(true);
+        } else {
+          ag.stop();
+        }
+      });
+    };
+
+    const playRun = () => {
+      result.animationGroups.forEach((ag) => {
+        if (ag.name === "Run") {
+          ag.start(true);
+        } else {
+          ag.stop();
+        }
+      });
+    };
+
+    playIdle();
+
+    root.rotationQuaternion = BABYLON.Quaternion.Identity();
+
+    const targetPoint = BABYLON.Vector3.Zero();
+    const targetRotation = root.rotationQuaternion.clone();
+
+    scene.onPointerObservable.add((eventData) => {
+      if (eventData.type !== BABYLON.PointerEventTypes.POINTERPICK) return;
+
+      const pickInfo = eventData.pickInfo;
+      const pickedMesh = pickInfo?.pickedMesh;
+
+      if (pickedMesh == null) return;
+
+      if (pickedMesh.name !== "ground") return;
+
+      targetPoint.copyFrom(eventData.pickInfo.pickedPoint);
+
+      const dir = targetPoint.subtract(root.position).normalize();
+      targetRotation.copyFrom(
+        BABYLON.Quaternion.FromLookDirectionLH(dir, root.up)
+      );
     });
-    root.rotate(BABYLON.Vector3.Up(), Math.PI);
+
+    const speed = 4;
+    const rotLerpSpeed = 16;
+    const rotAmount = 5;
+    const maxDelta = speed * 0.01;
+
+    const axis = {
+      f: 0,
+      r: 0,
+    };
+
+    const keys = {
+      KeyW: 1,
+      KeyS: -1,
+      KeyA: -1,
+      KeyD: 1,
+    };
+
+    const pressedKeys = {};
+
+    scene.onKeyboardObservable.add((eventData) => {
+      const code = eventData.event.code;
+
+      const getKey = (c) => {
+        return !!pressedKeys[c] ? keys[c] : 0;
+      };
+
+      if (eventData.type === BABYLON.KeyboardEventTypes.KEYDOWN) {
+        pressedKeys[code] = 1;
+      } else if (eventData.type === BABYLON.KeyboardEventTypes.KEYUP) {
+        pressedKeys[code] = 0;
+      }
+
+      axis.f = getKey("KeyW") + getKey("KeyS");
+      axis.r = getKey("KeyA") + getKey("KeyD");
+    });
+
+    scene.onBeforeRenderObservable.add(() => {
+      const deltaTime = (scene.deltaTime ?? 1) / 1000;
+
+      if (Math.abs(axis.f) > 0.001) {
+        const nextPoint = root.position.add(root.forward.scale(axis.f * 0.3));
+
+        targetPoint.copyFrom(nextPoint);
+      }
+
+      if (Math.abs(axis.r) > 0.001) {
+        targetRotation.multiplyInPlace(
+          BABYLON.Quaternion.RotationAxis(
+            root.up,
+            axis.r * rotAmount * deltaTime
+          )
+        );
+      }
+
+      BABYLON.Quaternion.SlerpToRef(
+        root.rotationQuaternion,
+        targetRotation,
+        rotLerpSpeed * deltaTime,
+        root.rotationQuaternion
+      );
+
+      const diff = targetPoint.subtract(root.position);
+      if (diff.length() < maxDelta) {
+        playIdle();
+        return;
+      }
+
+      playRun();
+
+      const dir = diff.normalize();
+
+      const velocity = dir.scaleInPlace(speed * deltaTime);
+      root.position.addInPlace(velocity);
+    });
   });
 
   return scene;
