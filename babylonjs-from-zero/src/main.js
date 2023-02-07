@@ -93,7 +93,7 @@ const createScene = function () {
 
     root.rotationQuaternion = BABYLON.Quaternion.Identity();
 
-    const targetPoint = BABYLON.Vector3.Zero();
+    const targetPoint = root.position.clone();
     const targetRotation = root.rotationQuaternion.clone();
 
     scene.onPointerObservable.add((eventData) => {
