@@ -27,10 +27,12 @@ const createScene = function () {
   // Dim the light a small amount 0 - 1
   light.intensity = 1;
 
+  const MAP_SIZE = 200;
+
   // Built-in 'ground' shape.
   const ground = BABYLON.MeshBuilder.CreateGround(
     "ground",
-    { width: 50, height: 50 },
+    { width: MAP_SIZE, height: MAP_SIZE },
     scene
   );
 
@@ -39,13 +41,13 @@ const createScene = function () {
   const groundTexture = new BABYLON.Texture(
     "https://playground.babylonjs.com/textures/floor.png"
   );
-  groundTexture.uScale = groundTexture.vScale = 20;
+  groundTexture.uScale = groundTexture.vScale = MAP_SIZE / 2.5;
   material.diffuseTexture = groundTexture;
 
   const groundBumpTexture = new BABYLON.Texture(
     "https://playground.babylonjs.com/textures/floor_bump.png"
   );
-  groundBumpTexture.uScale = groundBumpTexture.vScale = 20;
+  groundBumpTexture.uScale = groundBumpTexture.vScale = MAP_SIZE / 2.5;
   material.bumpTexture = groundBumpTexture;
 
   material.specularColor = BABYLON.Color3.White().scale(0.3);
@@ -188,6 +190,55 @@ const createScene = function () {
       const velocity = dir.scale(speed * deltaTime);
       root.position.addInPlace(velocity);
     });
+  });
+
+  BABYLON.SceneLoader.ImportMeshAsync(
+    null,
+    "./public/",
+    "Resource_PineTree.gltf",
+    scene
+  ).then((result) => {
+    const [root] = result.meshes;
+    root.scaling.setAll(1);
+
+    const childMeshes = root.getChildMeshes(false);
+    const merged = BABYLON.Mesh.MergeMeshes(
+      childMeshes,
+      true,
+      true,
+      undefined,
+      false,
+      true
+    );
+    merged.isPickable = false;
+    merged.checkCollisions = false;
+
+    const COUNT = 20_000;
+    const offset = 5;
+    const max = MAP_SIZE / 2 - 2 - offset;
+
+    const getPos = () =>
+      (offset + Math.random() * max) * (Math.random() > 0.5 ? 1 : -1);
+
+    const bufferMatrices = new Float32Array(16 * COUNT);
+    for (let i = 0; i < COUNT; i++) {
+      const x = getPos();
+      const z = getPos();
+      const pos = new BABYLON.Vector3(x, 0, z);
+      const scale = BABYLON.Vector3.One().setAll(
+        BABYLON.Scalar.RandomRange(2, 10)
+      );
+      const angle = BABYLON.Scalar.RandomRange(0, 2 * Math.PI);
+      const rot = BABYLON.Quaternion.FromEulerAngles(0, angle, 0);
+
+      const matrix = BABYLON.Matrix.Compose(scale, rot, pos);
+
+      matrix.copyToArray(bufferMatrices, i * 16);
+    }
+
+    merged.thinInstanceSetBuffer("matrix", bufferMatrices, 16, true);
+
+    merged.alwaysSelectAsActiveMesh = true;
   });
 
   return scene;
