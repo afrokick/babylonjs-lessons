@@ -28,13 +28,25 @@ const createScene = function () {
   light.intensity = 1;
 
   const MAP_SIZE = 200;
+  const MAP_MAX_HEIGHT = 25;
 
   // Built-in 'ground' shape.
-  const ground = BABYLON.MeshBuilder.CreateGround(
+  const ground = BABYLON.MeshBuilder.CreateGroundFromHeightMap(
     "ground",
-    { width: MAP_SIZE, height: MAP_SIZE },
+    "./public/heightMap.jpg",
+    {
+      width: MAP_SIZE,
+      height: MAP_SIZE,
+      subdivisions: 16,
+      minHeight: 0,
+      maxHeight: MAP_MAX_HEIGHT,
+      onReady: () => {
+        createTrees();
+      },
+    },
     scene
   );
+  ground.isPickable = true;
 
   const material = new BABYLON.StandardMaterial("groundMaterial", scene);
 
@@ -192,54 +204,69 @@ const createScene = function () {
     });
   });
 
-  BABYLON.SceneLoader.ImportMeshAsync(
-    null,
-    "./public/",
-    "Resource_PineTree.gltf",
-    scene
-  ).then((result) => {
-    const [root] = result.meshes;
-    root.scaling.setAll(1);
+  function createTrees() {
+    BABYLON.SceneLoader.ImportMeshAsync(
+      null,
+      "./public/",
+      "Resource_PineTree.gltf",
+      scene
+    ).then((result) => {
+      const [root] = result.meshes;
+      root.scaling.setAll(1);
 
-    const childMeshes = root.getChildMeshes(false);
-    const merged = BABYLON.Mesh.MergeMeshes(
-      childMeshes,
-      true,
-      true,
-      undefined,
-      false,
-      true
-    );
-    merged.isPickable = false;
-    merged.checkCollisions = false;
-
-    const COUNT = 20_000;
-    const offset = 5;
-    const max = MAP_SIZE / 2 - 2 - offset;
-
-    const getPos = () =>
-      (offset + Math.random() * max) * (Math.random() > 0.5 ? 1 : -1);
-
-    const bufferMatrices = new Float32Array(16 * COUNT);
-    for (let i = 0; i < COUNT; i++) {
-      const x = getPos();
-      const z = getPos();
-      const pos = new BABYLON.Vector3(x, 0, z);
-      const scale = BABYLON.Vector3.One().setAll(
-        BABYLON.Scalar.RandomRange(2, 10)
+      const childMeshes = root.getChildMeshes(false);
+      const merged = BABYLON.Mesh.MergeMeshes(
+        childMeshes,
+        true,
+        true,
+        undefined,
+        false,
+        true
       );
-      const angle = BABYLON.Scalar.RandomRange(0, 2 * Math.PI);
-      const rot = BABYLON.Quaternion.FromEulerAngles(0, angle, 0);
+      merged.isPickable = false;
+      merged.checkCollisions = false;
 
-      const matrix = BABYLON.Matrix.Compose(scale, rot, pos);
+      const COUNT = 20_000;
+      const offset = 5;
+      const max = MAP_SIZE / 2 - 2 - offset;
 
-      matrix.copyToArray(bufferMatrices, i * 16);
-    }
+      const getPos = () =>
+        (offset + Math.random() * max) * (Math.random() > 0.5 ? 1 : -1);
 
-    merged.thinInstanceSetBuffer("matrix", bufferMatrices, 16, true);
+      const bufferMatrices = new Float32Array(16 * COUNT);
 
-    merged.alwaysSelectAsActiveMesh = true;
-  });
+      const origin = new BABYLON.Vector3(0, MAP_MAX_HEIGHT + 0.1, 0);
+      const ray = new BABYLON.Ray(
+        origin,
+        BABYLON.Vector3.Down(),
+        MAP_MAX_HEIGHT + 0.2
+      );
+
+      for (let i = 0; i < COUNT; i++) {
+        const x = getPos();
+        const z = getPos();
+        origin.x = x;
+        origin.z = z;
+        const result = scene.pickWithRay(ray, (mesh) => mesh === ground);
+        const y = result.pickedPoint?.y ?? 0;
+
+        const pos = new BABYLON.Vector3(x, y, z);
+        const scale = BABYLON.Vector3.One().setAll(
+          BABYLON.Scalar.RandomRange(2, 10)
+        );
+        const angle = BABYLON.Scalar.RandomRange(0, 2 * Math.PI);
+        const rot = BABYLON.Quaternion.FromEulerAngles(0, angle, 0);
+
+        const matrix = BABYLON.Matrix.Compose(scale, rot, pos);
+
+        matrix.copyToArray(bufferMatrices, i * 16);
+      }
+
+      merged.thinInstanceSetBuffer("matrix", bufferMatrices, 16, true);
+
+      merged.alwaysSelectAsActiveMesh = true;
+    });
+  }
 
   return scene;
 };
@@ -259,4 +286,8 @@ window.addEventListener("keydown", (ev) => {
       scene.debugLayer.show({ overlay: true });
     }
   }
+});
+
+window.addEventListener("resize", () => {
+  engine.resize();
 });
