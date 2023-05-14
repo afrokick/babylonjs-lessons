@@ -6,7 +6,8 @@
     "allowJs": true,
     "noEmit": true,
     "strict": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": ["node", "babylonjs"]
   },
   "exclude": ["node_modules"]
 }

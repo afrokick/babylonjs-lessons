@@ -1,0 +1,23 @@
+{
+  "name": "babylonjs-lessons",
+  "version": "1.0.0",
+  "description": "Серии уроков по BabylonJS.",
+  "main": "index.js",
+  "devDependencies": {
+    "babylonjs": "^6.3.1",
+    "typescript": "^5.0.4"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/afrokick/babylonjs-lessons.git"
+  },
+  "author": "Alex Sosnovskiy",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/afrokick/babylonjs-lessons/issues"
+  },
+  "homepage": "https://github.com/afrokick/babylonjs-lessons#readme"
+}

@@ -1,6 +1,3 @@
-import * as BABYLON from "https://esm.sh/@babylonjs/core@5.44.0/Legacy/legacy";
-import "https://esm.sh/@babylonjs/loaders@5.44.0/glTF";
-
 const canvas = document.querySelector("#game-canvas");
 const engine = new BABYLON.Engine(canvas, true, { stencil: true }, true);
 
@@ -277,17 +274,46 @@ engine.runRenderLoop(() => {
   scene.render();
 });
 
-window.addEventListener("keydown", (ev) => {
-  // Shift+Ctrl+Alt+I
-  if (ev.shiftKey && ev.ctrlKey && ev.altKey && ev.keyCode === 73) {
+window.addEventListener("resize", () => {
+  engine.resize();
+});
+
+async function addInspectorForScene(scene) {
+  const switchDebugLayer = () => {
     if (scene.debugLayer.isVisible()) {
       scene.debugLayer.hide();
     } else {
       scene.debugLayer.show({ overlay: true });
     }
-  }
-});
+  };
 
-window.addEventListener("resize", () => {
-  engine.resize();
-});
+  // hide/show the Inspector
+  window.addEventListener("keydown", async (ev) => {
+    // Shift+Ctrl+Alt+I
+    if (ev.shiftKey && ev.ctrlKey && ev.altKey && ev.keyCode === 73) {
+      const debuggerScript = document.querySelector("script[inspector]");
+
+      if (!debuggerScript) {
+        console.log(`Start loading inspector...`);
+        const s = document.createElement("script");
+        s.setAttribute("inspector", "true");
+        s.src =
+          "https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js";
+
+        s.onload = () => {
+          console.log(`Inspector loaded!`);
+          switchDebugLayer();
+        };
+        s.onerror = () => {
+          console.log(`Inspector failed to load`);
+        };
+        document.body.appendChild(s);
+        return;
+      }
+
+      switchDebugLayer();
+    }
+  });
+}
+
+addInspectorForScene(scene);
