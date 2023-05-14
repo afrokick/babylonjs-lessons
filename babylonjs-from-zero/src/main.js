@@ -2,19 +2,23 @@ const canvas = document.querySelector("#game-canvas");
 const engine = new BABYLON.Engine(canvas, true, { stencil: true }, true);
 
 const createScene = function () {
+  const CAMERA_HEIGHT = 2;
+  const CAMERA_RADIUS = 25;
+  const CAMERA_ALPHA = Math.PI * 0.25;
+  const CAMERA_BETA = Math.PI * 0.3;
   // Creates a basic Babylon Scene object
   const scene = new BABYLON.Scene(engine);
-  // Creates and positions a free camera
-  const camera = new BABYLON.FreeCamera(
+
+  const camera = new BABYLON.ArcRotateCamera(
     "camera1",
-    new BABYLON.Vector3(0, 5, -10),
+    CAMERA_ALPHA,
+    CAMERA_BETA,
+    CAMERA_RADIUS,
+    new BABYLON.Vector3(0, CAMERA_HEIGHT, 0),
     scene
   );
   camera.minZ = 0.01;
-  // Targets the camera to scene origin
-  camera.setTarget(BABYLON.Vector3.Zero());
-  // Attaches the camera to the canvas
-  camera.attachControl(canvas, true);
+
   // Creates a light, aiming 0,1,0
   const light = new BABYLON.HemisphericLight(
     "light",
@@ -79,7 +83,7 @@ const createScene = function () {
     "Adventurer.gltf",
     scene
   ).then((result) => {
-    const [root] = result.meshes;
+    const [playerRoot] = result.meshes;
     const playIdle = () => {
       result.animationGroups.forEach((ag) => {
         if (ag.name === "Idle") {
@@ -102,10 +106,10 @@ const createScene = function () {
 
     playIdle();
 
-    root.rotationQuaternion = BABYLON.Quaternion.Identity();
+    playerRoot.rotationQuaternion = BABYLON.Quaternion.Identity();
 
-    const targetPoint = root.position.clone();
-    const targetRotation = root.rotationQuaternion.clone();
+    const targetPoint = playerRoot.position.clone();
+    const targetRotation = playerRoot.rotationQuaternion.clone();
 
     scene.onPointerObservable.add((eventData) => {
       if (eventData.type !== BABYLON.PointerEventTypes.POINTERPICK) return;
@@ -119,9 +123,10 @@ const createScene = function () {
 
       targetPoint.copyFrom(eventData.pickInfo.pickedPoint);
 
-      const dir = targetPoint.subtract(root.position).normalize();
+      const dir = targetPoint.subtract(playerRoot.position).normalize();
+      dir.y = 0;
       targetRotation.copyFrom(
-        BABYLON.Quaternion.FromLookDirectionLH(dir, root.up)
+        BABYLON.Quaternion.FromLookDirectionLH(dir, BABYLON.Vector3.UpReadOnly)
       );
     });
 
@@ -165,28 +170,44 @@ const createScene = function () {
       const deltaTime = (scene.deltaTime ?? 1) / 1000;
 
       if (Math.abs(axis.f) > 0.001) {
-        const nextPoint = root.position.add(root.forward.scale(axis.f * 0.3));
+        const nextPoint = playerRoot.position.add(
+          playerRoot.forward.scale(axis.f * 0.3)
+        );
 
         targetPoint.copyFrom(nextPoint);
+
+        const origin = new BABYLON.Vector3(
+          targetPoint.x,
+          MAP_MAX_HEIGHT + 0.1,
+          targetPoint.z
+        );
+        const ray = new BABYLON.Ray(
+          origin,
+          BABYLON.Vector3.Down(),
+          MAP_MAX_HEIGHT + 0.2
+        );
+
+        const result = scene.pickWithRay(ray, (mesh) => mesh === ground);
+        targetPoint.y = result.pickedPoint?.y ?? 0;
       }
 
       if (Math.abs(axis.r) > 0.001) {
         targetRotation.multiplyInPlace(
           BABYLON.Quaternion.RotationAxis(
-            root.up,
+            BABYLON.Vector3.UpReadOnly,
             axis.r * rotAmount * deltaTime
           )
         );
       }
 
       BABYLON.Quaternion.SlerpToRef(
-        root.rotationQuaternion,
+        playerRoot.rotationQuaternion,
         targetRotation,
         rotLerpSpeed * deltaTime,
-        root.rotationQuaternion
+        playerRoot.rotationQuaternion
       );
 
-      const diff = targetPoint.subtract(root.position);
+      const diff = targetPoint.subtract(playerRoot.position);
       if (diff.length() < maxDelta) {
         playIdle();
         return;
@@ -197,7 +218,10 @@ const createScene = function () {
       const dir = diff.normalize();
 
       const velocity = dir.scale(speed * deltaTime);
-      root.position.addInPlace(velocity);
+      playerRoot.position.addInPlace(velocity);
+
+      camera.target.copyFrom(playerRoot.position);
+      camera.target.y += CAMERA_HEIGHT;
     });
   });
 
